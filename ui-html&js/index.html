@@ -1,0 +1,205 @@
+<html>
+    <head>
+        <title>ColorBoxes</title>
+        <script>
+            var count = 0;
+            var currentSelectedBox = "";
+            var boxes = [];
+            var serverResponseJson;
+            var url= "http://localhost:7000/";
+            function drawBoxes() {
+                document.getElementById("main").innerHTML="";
+                var usersUrl=url+"get";
+                var xhttp = new XMLHttpRequest(); 
+                xhttp.open("GET", usersUrl, true);
+                xhttp.send();
+                xhttp.onreadystatechange=function(){
+                    if(this.readyState==4 && this.status==200) {
+                        var serverResponseText = xhttp.responseText;
+                        serverResponseJson = JSON.parse(serverResponseText);
+                        count = serverResponseJson.size;
+                        for(i=0;i<serverResponseJson.boxes.length;i++) {
+                            CreateBox(serverResponseJson.boxes[i].boxId,serverResponseJson.boxes[i].color);
+                        }
+                    }
+                }
+            }
+            
+            function openTab(evt, tabName) {
+                var i, tabcontent, tablinks;
+                tabcontent = document.getElementsByClassName("tabcontent");
+                for (i = 0; i < tabcontent.length; i++) {
+                    tabcontent[i].style.display = "none";
+                }
+                tablinks = document.getElementsByClassName("tablinks");
+                for (i = 0; i < tablinks.length; i++) {
+                    tablinks[i].className = tablinks[i].className.replace(" active", "");
+                }
+                document.getElementById(tabName).style.display = "block";
+                document.getElementById(tabName+"btn").className += " active"
+                //evt.currentTarget.className += " active";
+                if(tabName=="home") {
+                    console.log("HOME SELECTED");
+                    drawBoxes();
+                    currentSelectedBox=""
+                } else if(tabName=="color"){
+                    document.getElementById("updateresult").innerHTML="";
+                } else {
+                    console.log("STATUS SELECTED");
+                    document.getElementById("statusboxcount").innerHTML="There are "+count+ " boxes currently";
+                    if(currentSelectedBox=="") {
+                        document.getElementById("statusboxcolor").innerHTML="No Box selected currently";
+                    } else {
+                        document.getElementById("statusboxcolor").innerHTML="Selected Box color is "+document.getElementById(currentSelectedBox).childNodes[0].style.backgroundColor;
+                    }
+                }
+            }
+
+            function AddBox() {
+                console.log("add box");
+                var usersUrl=url+"add";
+                var xhttp = new XMLHttpRequest(); 
+                xhttp.open("GET", usersUrl, true);
+                xhttp.send();
+                xhttp.onreadystatechange=function(){
+                    if(this.readyState==4 && this.status==200) {
+                        var id = xhttp.responseText;
+                        CreateBox(id, "");
+                    }
+                }
+            }
+
+            function CreateBox(id,color) {
+                var mainDiv = document.getElementById("main");
+
+                var outDiv = document.createElement("div");
+                outDiv.id = "out"+id;
+                outDiv.className = "OuterBox";
+                outDiv.setAttribute("onclick","SelectBox(this.id)");
+                boxes[boxes.length] = "out" + id;
+                
+                var inDiv = document.createElement("div");
+                inDiv.id = "in"+id;
+                inDiv.className = "InnerBox";
+                inDiv.style.backgroundColor = color;
+                outDiv.appendChild(inDiv);
+  
+                mainDiv.appendChild(outDiv);
+            }
+          
+            function DeleteBox() { 
+
+                var usersUrl=url+"delete?id="+currentSelectedBox;
+                var xhttp = new XMLHttpRequest(); 
+                xhttp.open("GET", usersUrl, true);
+                xhttp.send();
+                xhttp.onreadystatechange=function(){
+                    if(this.readyState==4 && this.status==200) {
+                        var serverResponseText = xhttp.responseText;
+                        var id = xhttp.responseText;
+                        if(id!="") {
+                            var boxToDelete = "out"+id;
+                            var mainDiv = document.getElementById("main");
+                            var outDiv = document.getElementById(boxToDelete);
+                            mainDiv.removeChild(outDiv);
+                            currentSelectedBox="";
+                        }
+                    }
+                }
+            }
+
+            function SelectBox(id) {
+                console.log("Select-"+id);
+                var selectedBox = document.getElementById(id);
+                if(currentSelectedBox==id) {
+                    selectedBox.style.backgroundColor = "white";
+                    currentSelectedBox = "";
+                } else {
+                    if(currentSelectedBox!="") {
+                        var oldSelectedBox = document.getElementById(currentSelectedBox);
+                        oldSelectedBox.style.backgroundColor = "white";
+                    }
+                    selectedBox.style.backgroundColor = "grey";
+                    currentSelectedBox = id;
+                }
+            }
+            function UpdateBox() {
+                var selectedColor = document.getElementById("colorpicker");
+                if(currentSelectedBox=="") {
+                    document.getElementById("updateresult").innerHTML="Invalid action. No Box selected.";
+                } else {
+                    var usersUrl=url+"update?id="+currentSelectedBox+"&color="+selectedColor.value;
+                    var xhttp = new XMLHttpRequest(); 
+                    xhttp.open("GET", usersUrl, true);
+                    xhttp.send();
+                    xhttp.onreadystatechange=function(){
+                        if(this.readyState==4 && this.status==200) {
+                            var serverResponseText = xhttp.responseText;
+                            document.getElementById("updateresult").innerHTML="Color changed successfully to "+selectedColor.value;
+                            }
+                        }
+                }
+            }
+        </script>
+
+        <link rel="stylesheet" href="style.css">
+
+    </head>
+
+    <body onload="openTab(event, 'home')">
+        <h1>ColorBoxes</h1>
+        <p>Add box or Delete box or Change color of the selected box!!!</p>
+        
+        <div class="tab">
+          <button id ="homebtn" class="tablinks" onclick="openTab(event, 'home')">HOME</button>
+          <button id ="colorbtn" class="tablinks" onclick="openTab(event, 'color')">COLOR CHANGE</button>
+          <button id ="statusbtn" class="tablinks" onclick="openTab(event, 'status')">STATUS INFO</button>
+        </div>
+        
+        <div id="home" class="tabcontent">
+          <h3>HOME</h3>
+          <p>ADD/DELETE Boxes</p>
+            <button type="button" onclick="AddBox()">Add</button>
+            
+            <button type="button" onclick="DeleteBox()">Remove</button>
+
+            <hr>
+            <div id="main" class="OuterContainer">
+            </div>
+        </div>
+        
+        <div id="color" class="tabcontent">
+          <h3>COLOR CHANGE</h3>
+          <p>Change Color of the selected box.</p> 
+          <hr>
+          <select id="colorpicker">
+            <option value="blue">blue</option>
+            <option value="green">green</option>
+            <option value="teal">teal</option>
+            <option value="white">white</option>
+            <option value="silver">silver</option>
+            <option value="olive">olive</option>
+            <option value="aqua">aqua</option>
+            <option value="navy">navy</option>
+            <option value="purple">purple</option>
+            <option value="lime">lime</option>
+          </select>
+          <button type="button" onclick="UpdateBox()">Select Color</button>
+          <br>
+          <br>
+          <div id="updateresult"></div>
+        </div>
+        
+        <div id="status" class="tabcontent">
+          <h3>STATUS INFO</h3>
+          <p>Display Status information of boxes application.</p>
+          <hr>
+          <br> <br>
+          <div id="statusboxcount"></div>
+          <br> <br>
+          <div id="statusboxcolor"></div>
+        </div>
+             
+    </body>
+
+</html>
